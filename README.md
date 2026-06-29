@@ -51,6 +51,20 @@ Stop and remove everything (including the database volume):
 docker compose down -v
 ```
 
+### Live-reload during development (Compose watch)
+
+`docker compose up --watch` launches the stack and watches your files: when you
+edit and save anything under `src/` or `pom.xml`, Compose automatically rebuilds
+and restarts the `app` service. Because this is a compiled (fat-jar) app, the
+watch action is `rebuild` (see the `develop.watch` block in
+[`docker-compose.yml`](docker-compose.yml)).
+
+```bash
+docker compose up --watch
+```
+
+Then just edit source files in your editor — the running service updates itself.
+
 ## Run the tests
 
 The suite spins up the API against a real MySQL and exercises every endpoint

@@ -20,6 +20,7 @@ public final class ApiRouter {
 
     public static Router create(Vertx vertx, MessagingService service) {
         Router router = Router.router(vertx);
+        router.route().handler(ApiRouter::logRequest);
         router.route().handler(BodyHandler.create());
 
         UserHandler users = new UserHandler(service);
@@ -40,6 +41,18 @@ public final class ApiRouter {
 
         router.route().failureHandler(ApiRouter::handleFailure);
         return router;
+    }
+
+    /** Logs one line per request once the response completes: method, uri, status, duration. */
+    private static void logRequest(RoutingContext ctx) {
+        long startNanos = System.nanoTime();
+        ctx.addBodyEndHandler(v -> {
+            long millis = (System.nanoTime() - startNanos) / 1_000_000;
+            log.info("{} {} -> {} ({} ms)",
+                    ctx.request().method(), ctx.request().uri(),
+                    ctx.response().getStatusCode(), millis);
+        });
+        ctx.next();
     }
 
     private static void handleFailure(RoutingContext ctx) {
