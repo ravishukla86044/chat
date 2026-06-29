@@ -1,0 +1,65 @@
+package com.ravi.chat.repo;
+
+import com.ravi.chat.model.User;
+import io.vertx.core.Future;
+import io.vertx.mysqlclient.MySQLClient;
+import io.vertx.sqlclient.Pool;
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.Tuple;
+
+import java.util.List;
+import java.util.Optional;
+
+public class UserRepository {
+
+    private final Pool pool;
+
+    public UserRepository(Pool pool) {
+        this.pool = pool;
+    }
+
+    public Future<User> create(String username) {
+        return pool.preparedQuery("INSERT INTO users (username) VALUES (?)")
+                .execute(Tuple.of(username))
+                .map(rs -> rs.property(MySQLClient.LAST_INSERTED_ID))
+                .flatMap(id -> findById(id).map(opt -> opt.orElseThrow()));
+    }
+
+    public Future<Optional<User>> findById(long id) {
+        return pool.preparedQuery("SELECT id, username, created_at FROM users WHERE id = ?")
+                .execute(Tuple.of(id))
+                .map(rs -> {
+                    var it = rs.iterator();
+                    return it.hasNext() ? Optional.of(map(it.next())) : Optional.<User>empty();
+                });
+    }
+
+    public Future<Boolean> existsById(long id) {
+        return pool.preparedQuery("SELECT 1 FROM users WHERE id = ?")
+                .execute(Tuple.of(id))
+                .map(rs -> rs.size() > 0);
+    }
+
+    /** How many of the given ids exist as users. Used to validate membership sets. */
+    public Future<Integer> countExisting(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return Future.succeededFuture(0);
+        }
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) AS c FROM users WHERE id IN (");
+        Tuple params = Tuple.tuple();
+        for (int i = 0; i < ids.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+            params.addLong(ids.get(i));
+        }
+        sql.append(")");
+        return pool.preparedQuery(sql.toString()).execute(params)
+                .map(rs -> rs.iterator().next().getInteger("c"));
+    }
+
+    private static User map(Row row) {
+        return new User(
+                row.getLong("id"),
+                row.getString("username"),
+                row.getLocalDateTime("created_at"));
+    }
+}
