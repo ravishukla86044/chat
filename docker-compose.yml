@@ -33,5 +33,24 @@ services:
     ports:
       - "8080:8080"
 
+  # Run the full test suite inside Docker (no local Java/Maven needed).
+  # Uses Testcontainers, which talks to the host Docker daemon via the mounted
+  # socket and starts MySQL as a sibling container.
+  #   Usage:  docker compose run --rm test
+  test:
+    image: maven:3.9-eclipse-temurin-21
+    working_dir: /app
+    volumes:
+      - .:/app
+      - maven-cache:/root/.m2
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # On Docker Desktop the test container reaches mapped ports via the host.
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    command: ["mvn", "-B", "test"]
+    profiles: ["test"]
+
 volumes:
   mysql-data:
+  maven-cache:
