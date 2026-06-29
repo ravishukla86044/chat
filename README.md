@@ -192,13 +192,7 @@ src/main/java/com/ravi/chat
   repo/                    SQL via the reactive MySQL client
   service/                 validation + authorization rules
   web/                     router, handlers, X-User-Id, JSON errors
-src/main/resources/db/migration   V1 schema, V2 seed
+src/main/resources/db/migration   V1 schema, V2 seed, V3 user email
 src/test/java/com/ravi/chat       end-to-end API tests
 ```
 
-## Notes
-
-The tests originally used Testcontainers; the local Docker Engine (29.x) returned
-a malformed `/info` to Testcontainers' bundled docker-java, so the suite now
-drives a real MySQL provided by docker-compose instead — same end-to-end
-coverage. See [`WRITEUP.md`](WRITEUP.md) for the reasoning and other trade-offs.

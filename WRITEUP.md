@@ -38,13 +38,6 @@ The decisions I owned:
   insisting we *keep* `dm_key` so 1:1 dedup stayed race-safe. I pushed back on a
   suggestion to go further (deterministic conversation ids / Snowflake) as
   over-scope for a single-node exercise, and noted the evolution instead.
-- **Tooling that didn't work.** I'd chosen Testcontainers, and the AI wired it in,
-  but the local Docker Engine (29.x, API 1.54) returned a malformed `/info` that
-  Testcontainers' bundled docker-java rejected with HTTP 400 — over the npipe,
-  via `DOCKER_HOST`, with a pinned API version, and even over the mounted socket
-  inside a container. Rather than keep fighting it, I overrode that choice and
-  drove a **real MySQL through docker-compose** instead. The tests are identical;
-  only the database provisioning changed.
 - **Process.** I kept all `git` commits in my own hands (not the tool's) so the
   history reflects my checkpoints, and removed redundant scaffolding (a committed
   Maven wrapper / `.gitattributes`) once we committed to a Docker-only workflow.
