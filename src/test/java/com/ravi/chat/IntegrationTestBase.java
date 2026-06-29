@@ -21,21 +21,19 @@ import io.vertx.sqlclient.PoolOptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.testcontainers.containers.MySQLContainer;
 
 import java.util.concurrent.TimeUnit;
 
 /**
- * Boots a real MySQL (Testcontainers), runs the Flyway migrations, and starts
- * the actual Vert.x HTTP server so tests exercise the API end-to-end over HTTP.
- * Seeded users from V2 are: 1=alice, 2=bob, 3=carol.
+ * Runs the Flyway migrations and starts the real Vert.x HTTP server against a
+ * MySQL database, so tests exercise the API end-to-end over HTTP.
+ *
+ * <p>The database connection comes from {@link AppConfig#fromEnv()} (env vars,
+ * defaulting to localhost:3306). In CI/local this MySQL is provided by
+ * docker-compose — see the {@code test} service — so the suite needs no local
+ * MySQL install. Seeded users from V2 are: 1=alice, 2=bob, 3=carol.
  */
 abstract class IntegrationTestBase {
-
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("chat")
-            .withUsername("chat")
-            .withPassword("chatpass");
 
     protected static Vertx vertx;
     protected static Pool pool;
@@ -45,12 +43,7 @@ abstract class IntegrationTestBase {
 
     @BeforeAll
     static void startAll() throws Exception {
-        MYSQL.start();
-
-        AppConfig config = new AppConfig(
-                MYSQL.getHost(),
-                MYSQL.getMappedPort(MySQLContainer.MYSQL_PORT),
-                "chat", "chat", "chatpass", 0);
+        AppConfig config = AppConfig.fromEnv();
         Migrations.run(config);
 
         vertx = Vertx.vertx();
@@ -73,7 +66,6 @@ abstract class IntegrationTestBase {
         if (server != null) await(server.close());
         if (pool != null) await(pool.close());
         if (vertx != null) await(vertx.close());
-        MYSQL.stop();
     }
 
     /** Each test starts from a clean slate (users are kept; conversations/messages cleared). */
