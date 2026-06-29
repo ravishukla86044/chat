@@ -11,10 +11,10 @@ public class UserHandler {
         this.service = service;
     }
 
-    /** POST /users {username} */
+    /** POST /users {username, email} */
     public void create(RoutingContext ctx) {
-        String username = RequestUtils.body(ctx).getString("username");
-        service.createUser(username)
+        var body = RequestUtils.body(ctx);
+        service.createUser(body.getString("username"), body.getString("email"))
                 .onSuccess(user -> RequestUtils.writeJson(ctx, 201, user.toJson()))
                 .onFailure(ctx::fail);
     }

@@ -142,7 +142,8 @@ class MessagingApiTest extends IntegrationTestBase {
         assertEquals(200, get("/conversations/" + conversationId + "/messages", CAROL).statusCode());
 
         // A freshly created non-member is denied.
-        long dave = post("/users", null, new JsonObject().put("username", "dave"))
+        long dave = post("/users", null,
+                new JsonObject().put("username", "dave").put("email", "dave@example.com"))
                 .bodyAsJsonObject().getLong("id");
         assertEquals(403, get("/conversations/" + conversationId + "/messages", dave).statusCode());
     }
@@ -233,6 +234,23 @@ class MessagingApiTest extends IntegrationTestBase {
                 .bodyAsJsonObject();
         assertEquals(0, page.getJsonArray("messages").size());
         assertNull(page.getLong("nextCursor"));
+    }
+
+    @Test
+    void duplicateEmailIsRejected() throws Exception {
+        assertEquals(201, post("/users", null,
+                new JsonObject().put("username", "erin").put("email", "erin@example.com")).statusCode());
+
+        // Same email (different case) for a different username -> rejected as a conflict.
+        HttpResponse<Buffer> resp = post("/users", null,
+                new JsonObject().put("username", "erin-again").put("email", "ERIN@example.com"));
+        assertEquals(409, resp.statusCode());
+    }
+
+    @Test
+    void creatingUserWithoutEmailIsRejected() throws Exception {
+        assertEquals(400, post("/users", null,
+                new JsonObject().put("username", "frank")).statusCode());
     }
 
     // --- helpers ---------------------------------------------------------

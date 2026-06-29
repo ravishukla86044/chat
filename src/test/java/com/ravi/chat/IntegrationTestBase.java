@@ -68,12 +68,17 @@ abstract class IntegrationTestBase {
         if (vertx != null) await(vertx.close());
     }
 
-    /** Each test starts from a clean slate (users are kept; conversations/messages cleared). */
+    /**
+     * Each test starts from a clean slate: conversations/messages are cleared and
+     * any test-created users are removed, while the three seeded users (ids 1-3)
+     * are kept.
+     */
     @BeforeEach
     void clean() throws Exception {
         await(pool.query("DELETE FROM messages").execute());
         await(pool.query("DELETE FROM conversation_participants").execute());
         await(pool.query("DELETE FROM conversations").execute());
+        await(pool.query("DELETE FROM users WHERE id > 3").execute());
     }
 
     // --- HTTP helpers ----------------------------------------------------

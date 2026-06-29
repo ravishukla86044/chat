@@ -83,10 +83,11 @@ read/post checks that `X-User-Id` is a participant of the conversation.
 All request/response bodies are JSON. Protected routes require `X-User-Id`.
 
 ### `POST /users`
+`email` is required and must be unique (case-insensitive); a duplicate returns `409`.
 ```bash
 curl -XPOST localhost:8080/users -H 'Content-Type: application/json' \
-  -d '{"username":"dave"}'
-# 201 {"id":4,"username":"dave","createdAt":"..."}
+  -d '{"username":"dave","email":"dave@example.com"}'
+# 201 {"id":4,"username":"dave","email":"dave@example.com","createdAt":"..."}
 ```
 
 ### `POST /messages` — send a direct message
@@ -141,7 +142,7 @@ JSON `{"error": "..."}` with status `400` (validation), `401` (missing/invalid
 
 ## Data model
 
-- **`users`** — `id`, `username`, `created_at`.
+- **`users`** — `id`, `username`, `email` (required, `UNIQUE`), `created_at`.
 - **`conversations`** — `id`, `type` (`direct` | `group`), `name`, `dm_key`,
   `created_at`. `dm_key` is the canonical `"loId-hiId"` for direct conversations
   (`NULL` for groups) with a `UNIQUE` constraint, giving **race-safe 1:1 dedup**:

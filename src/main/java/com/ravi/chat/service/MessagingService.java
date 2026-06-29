@@ -35,11 +35,18 @@ public class MessagingService {
         this.messages = messages;
     }
 
-    public Future<User> createUser(String username) {
+    public Future<User> createUser(String username, String email) {
         if (isBlank(username)) {
             return Future.failedFuture(ApiException.badRequest("username is required"));
         }
-        return users.create(username.trim());
+        if (isBlank(email)) {
+            return Future.failedFuture(ApiException.badRequest("email is required"));
+        }
+        String normalizedEmail = email.trim().toLowerCase();
+        if (!normalizedEmail.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            return Future.failedFuture(ApiException.badRequest("email is not valid"));
+        }
+        return users.create(username.trim(), normalizedEmail);
     }
 
     /** DM convenience: find-or-create the direct conversation, then send. */

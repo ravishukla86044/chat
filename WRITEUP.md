@@ -14,6 +14,12 @@ The decisions I owned:
   it to a `conversations` + `conversation_participants` model so the service can
   grow to **group chats** (the follow-up session is about extending this project,
   so I wanted a clean seam rather than a design I'd have to tear up).
+- **I made the DB schema extendable for the future.** A `type` column on
+  `conversations` plus a separate membership table means new conversation kinds
+  and features (group management, read receipts, roles) can be added *without
+  reshaping existing tables*. Crucially, `messages` references only
+  `conversation_id`, so message storage and pagination are untouched as the
+  membership model evolves — the extension points are isolated.
 - **Race-safe DM dedup** via a `dm_key` unique column (canonical `"loId-hiId"`,
   `NULL` for groups) instead of a read-then-write that can create duplicate
   conversations under concurrency.
