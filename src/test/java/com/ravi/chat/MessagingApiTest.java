@@ -163,6 +163,78 @@ class MessagingApiTest extends IntegrationTestBase {
         assertEquals(dm, conversations.getJsonObject(1).getLong("conversationId"));
     }
 
+    // --- More edge cases -------------------------------------------------
+
+    @Test
+    void cannotSendMessageToYourself() throws Exception {
+        assertEquals(400, sendDirect(ALICE, ALICE, "talking to myself").statusCode());
+    }
+
+    @Test
+    void missingRecipientIdIsRejected() throws Exception {
+        assertEquals(400, post("/messages", ALICE, new JsonObject().put("body", "hi")).statusCode());
+    }
+
+    @Test
+    void nonNumericUserHeaderIsUnauthorized() throws Exception {
+        HttpResponse<Buffer> resp = await(
+                client.get(port, "localhost", "/conversations").putHeader("X-User-Id", "abc").send());
+        assertEquals(401, resp.statusCode());
+    }
+
+    @Test
+    void nonNumericConversationIdIsBadRequest() throws Exception {
+        assertEquals(400, get("/conversations/not-a-number/messages", ALICE).statusCode());
+    }
+
+    @Test
+    void createGroupWithUnknownParticipantIsRejected() throws Exception {
+        HttpResponse<Buffer> resp = post("/conversations", ALICE,
+                new JsonObject().put("name", "ghosts").put("participantIds", new JsonArray().add(9999)));
+        assertEquals(400, resp.statusCode());
+    }
+
+    @Test
+    void createGroupWithoutOtherParticipantsIsRejected() throws Exception {
+        HttpResponse<Buffer> resp = post("/conversations", ALICE,
+                new JsonObject().put("name", "just me").put("participantIds", new JsonArray()));
+        assertEquals(400, resp.statusCode());
+    }
+
+    @Test
+    void groupParticipantsAreDeduplicated() throws Exception {
+        JsonObject conv = post("/conversations", ALICE,
+                new JsonObject().put("name", "dups")
+                        .put("participantIds", new JsonArray().add(BOB).add(BOB).add(CAROL)))
+                .bodyAsJsonObject();
+        JsonArray participants = conv.getJsonArray("participantIds");
+        assertEquals(3, participants.size());
+        assertTrue(participants.contains((int) ALICE));
+        assertTrue(participants.contains((int) BOB));
+        assertTrue(participants.contains((int) CAROL));
+    }
+
+    @Test
+    void limitIsCappedAtMaximum() throws Exception {
+        long conversationId = sendDirect(ALICE, BOB, "m1").bodyAsJsonObject().getLong("conversationId");
+        for (int i = 2; i <= 101; i++) {
+            sendDirect(ALICE, BOB, "m" + i);
+        }
+        JsonObject page = get("/conversations/" + conversationId + "/messages?limit=1000", ALICE)
+                .bodyAsJsonObject();
+        assertEquals(100, page.getJsonArray("messages").size(), "limit is clamped to the max of 100");
+        assertNotNull(page.getLong("nextCursor"));
+    }
+
+    @Test
+    void cursorBeforeStartReturnsEmptyPage() throws Exception {
+        long conversationId = sendDirect(ALICE, BOB, "only").bodyAsJsonObject().getLong("conversationId");
+        JsonObject page = get("/conversations/" + conversationId + "/messages?before=1", ALICE)
+                .bodyAsJsonObject();
+        assertEquals(0, page.getJsonArray("messages").size());
+        assertNull(page.getLong("nextCursor"));
+    }
+
     // --- helpers ---------------------------------------------------------
 
     private HttpResponse<Buffer> sendDirect(long sender, long recipient, String body) throws Exception {
